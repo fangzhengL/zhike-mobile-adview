@@ -1,6 +1,6 @@
 {
   "name": "zhike-mobile-adview",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "",
   "main": "AdView.js",
   "scripts": {
@@ -11,7 +11,7 @@
     "zhike-mobile-link-handler": "^1.0.0"
   },
   "peerDependencies": {
-    "zhike-mobile-logger": "^1.0.0",
+    "zhike-mobile-logger": "^2.0.0",
     "react-redux": "^5.0.0",
     "react-native-fs": "^2.3.3",
     "react-native-model-manager": "^1.0.0",
