@@ -12,7 +12,6 @@ import { connect } from 'react-redux';
 import Logger from 'zhike-mobile-logger';
 import PathUtils from 'zhike-path-utils';
 import ErrorMsg from 'zhike-mobile-error';
-import { defaultMapDispatchToProps } from 'zhike-mobile-navigation/utils';
 import Api from 'zhike-mobile-api';
 import handleLink from 'zhike-mobile-link-handler';
 import ZKButton from 'zhike-mobile-button';
@@ -72,7 +71,7 @@ class AdView extends Component {
     if (!customLinkHandled) {
       if (this.props.adInfo.link) {
         this._clearTime();
-        this.props.replaceFactory(this.props)({
+        this.props.replaceRoute({
           key: 'adWebView',
           navigationBarStyle: {
             backgroundColor: '#ffffff',
@@ -133,9 +132,7 @@ AdView.propTypes = {
   onHit:PropTypes.func,
 };
 
-const mapDispatchToProps = dispatch => defaultMapDispatchToProps(dispatch);
-export default connect(null, mapDispatchToProps)(AdView);
-
+export default AdView;
 
 // /ad:
 // /{...data[i], localPath, downloading}

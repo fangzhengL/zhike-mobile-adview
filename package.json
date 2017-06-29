@@ -1,21 +1,20 @@
 {
   "name": "zhike-mobile-adview",
-  "version": "2.0.2",
+  "version": "3.0.0",
   "description": "",
   "main": "AdView.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "react-redux": "^5.0.0",
-    "zhike-mobile-logger": "^1.0.0",
     "zhike-mobile-error": "^1.0.0",
     "zhike-mobile-link-handler": "^1.0.0"
   },
   "peerDependencies": {
+    "zhike-mobile-logger": "^1.0.0",
+    "react-redux": "^5.0.0",
     "react-native-fs": "^2.3.3",
     "react-native-model-manager": "^1.0.0",
-    "zhike-mobile-navigation": "^2.0.1",
     "zhike-mobile-api": "^1.0.0",
     "zhike-mobile-button": "^2.0.0",
     "zhike-path-utils": "^2.0.0"
