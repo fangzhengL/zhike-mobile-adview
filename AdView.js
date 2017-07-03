@@ -47,9 +47,9 @@ class AdView extends Component {
     return (
       this.props.adInfo ||
       (
-        this.props.navigation ||
-        this.props.navigation.state ||
-        this.props.navigation.state.params ||
+        this.props.navigation &&
+        this.props.navigation.state &&
+        this.props.navigation.state.params &&
         this.props.navigation.state.params.adInfo
       )
     );
@@ -59,9 +59,9 @@ class AdView extends Component {
     return (
       this.props.dismissAction ||
       (
-        this.props.navigation ||
-        this.props.navigation.state ||
-        this.props.navigation.state.params ||
+        this.props.navigation &&
+        this.props.navigation.state &&
+        this.props.navigation.state.params &&
         this.props.navigation.state.params.dismissAction
       )
     );
@@ -71,9 +71,9 @@ class AdView extends Component {
     return (
       this.props.onHit ||
       (
-        this.props.navigation ||
-        this.props.navigation.state ||
-        this.props.navigation.state.params ||
+        this.props.navigation &&
+        this.props.navigation.state &&
+        this.props.navigation.state.params &&
         this.props.navigation.state.params.onHit
       )
     );
@@ -83,9 +83,9 @@ class AdView extends Component {
     return (
       this.props.onWebViewStateChange ||
       (
-        this.props.navigation ||
-        this.props.navigation.state ||
-        this.props.navigation.state.params ||
+        this.props.navigation &&
+        this.props.navigation.state &&
+        this.props.navigation.state.params &&
         this.props.navigation.state.params.onWebViewStateChange
       )
     );
