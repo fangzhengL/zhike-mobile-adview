@@ -25,7 +25,7 @@ class AdView extends Component {
 
   constructor(props) {
     super(props);
-    this.state = { remainingSeconds:this._duration(props) };
+    this.state = { remainingSeconds:this._duration(props), renderWebView:false };
     this._handleTap = this._handleTap.bind(this);
   }
 
@@ -43,18 +43,74 @@ class AdView extends Component {
     }, 1000);
   }
 
+  _adInfo() {
+    return (
+      this.props.adInfo ||
+      (
+        this.props.navigation ||
+        this.props.navigation.state ||
+        this.props.navigation.state.params ||
+        this.props.navigation.state.params.adInfo
+      )
+    );
+  }
+
+  _dismissAction() {
+    return (
+      this.props.dismissAction ||
+      (
+        this.props.navigation ||
+        this.props.navigation.state ||
+        this.props.navigation.state.params ||
+        this.props.navigation.state.params.dismissAction
+      )
+    );
+  }
+
+  _onHit() {
+    return (
+      this.props.onHit ||
+      (
+        this.props.navigation ||
+        this.props.navigation.state ||
+        this.props.navigation.state.params ||
+        this.props.navigation.state.params.onHit
+      )
+    );
+  }
+
+  _onWebViewStateChange() {
+    return (
+      this.props.onWebViewStateChange ||
+      (
+        this.props.navigation ||
+        this.props.navigation.state ||
+        this.props.navigation.state.params ||
+        this.props.navigation.state.params.onWebViewStateChange
+      )
+    );
+  }
+
+  _handleWebViewStateChange(state) {
+    const onWebViewStateChange = this._onWebViewStateChange();
+    if (onWebViewStateChange) {
+      onWebViewStateChange(state);
+    }
+  }
+
   _duration(props) {
     props = props || this.props;
     return (
       props &&
-      props.adInfo &&
-      Object.prototype.hasOwnProperty.call(props.adInfo, 'startPageDuration') &&
-      parseInt(props.adInfo.startPageDuration, 10)
+      this._adInfo() &&
+      Object.prototype.hasOwnProperty.call(this._adInfo(), 'startPageDuration') &&
+      parseInt(this._adInfo().startPageDuration, 10)
     ) || 5;
   }
 
   _quit(action, ctx) {
-    this.props && this.props.dismissAction && this.props.dismissAction({ action, adInfo:ctx });
+    const dismiss = this._dismissAction();
+    dismiss && dismiss({ action, adInfo:ctx });
     this._clearTime();
   }
 
@@ -64,35 +120,36 @@ class AdView extends Component {
   }
 
   _handleTap() {
-    Logger.info('ad is being hit: ', this.props.adInfo);
-    this.props && this.props.onHit && this.props.onHit({ adInfo:this.props.adInfo });
-    const customLinkHandled = handleLink(this.props.adInfo.link);
+    Logger.info('ad is being hit: ', this._adInfo());
+    const onHit = this._onHit();
+    onHit && onHit({ adInfo:this._adInfo() });
+    const customLinkHandled = handleLink(this._adInfo().link);
     // assume if customLinkHandled, top route will be replaced
     if (!customLinkHandled) {
-      if (this.props.adInfo.link) {
+      if (this._adInfo().link) {
         this._clearTime();
-        this.props.replaceRoute({
-          key: 'adWebView',
-          navigationBarStyle: {
-            backgroundColor: '#ffffff',
-          },
-          leftIconProps:null,
-          sceneProps: {
-            url:this.props.adInfo.link,
-          },
-        });
+        this.setState({ renderWebView:true });
       } else {
-        this._quit({ action:'quit-nolink', adInfo:this.props.adInfo });
+        this._quit({ action:'quit-nolink', adInfo:this._adInfo() });
       }
     }
   }
 
   render() {
-    if (!this.props || !this.props.adInfo || !this.props.adInfo.localPath) {
+    if (!this.props || !this._adInfo() || !this._adInfo().localPath) {
       console.log('no local picture file, return null', this.props);
       return null;
     }
-    const uri = `file://${ADS_PATH}/${this.props.adInfo.localPath}`;
+    if (this.state.renderWebView) {
+      return (
+        <WebView
+          source={{ uri: `${this._adInfo().url}` }}
+          scalesPageToFit={true}
+          onNavigationStateChange={state => this._handleWebViewStateChange(state)}
+        />
+      )
+    }
+    const uri = `file://${ADS_PATH}/${this._adInfo().localPath}`;
     console.log('displaying picture: ', uri);
     const buttonTitleStyle = { fontSize:16, color:'#00b5e9', textAlign:'right' };
 
@@ -121,7 +178,6 @@ class AdView extends Component {
       </TouchableWithoutFeedback>
     );
   }
-
 }
 
 AdView.propTypes = {
@@ -130,6 +186,7 @@ AdView.propTypes = {
   }),
   dismissAction: PropTypes.func,
   onHit:PropTypes.func,
+  onWebViewStateChange: PropTypes.func,
 };
 
 export default AdView;
