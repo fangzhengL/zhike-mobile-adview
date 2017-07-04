@@ -94,7 +94,7 @@ class AdView extends Component {
   _handleWebViewStateChange(state) {
     const onWebViewStateChange = this._onWebViewStateChange();
     if (onWebViewStateChange) {
-      onWebViewStateChange(state);
+      onWebViewStateChange(state, this.props.navigation);
     }
   }
 
