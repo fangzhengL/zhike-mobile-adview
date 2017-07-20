@@ -1,6 +1,6 @@
 {
   "name": "zhike-mobile-adview",
-  "version": "3.2.0",
+  "version": "4.0.0",
   "description": "",
   "main": "AdView.js",
   "scripts": {
@@ -11,12 +11,7 @@
   },
   "peerDependencies": {
     "zhike-mobile-logger": "^2.0.0",
-    "react-redux": "^5.0.0",
-    "react-native-fs": "^2.3.3",
-    "react-native-model-manager": "^1.0.0",
-    "zhike-mobile-api": "^1.0.0",
-    "zhike-mobile-button": "^2.0.0",
-    "zhike-path-utils": "^2.0.0"
+    "zhike-mobile-button": "^2.0.0"
   },
   "repository": {
     "type": "git",

@@ -7,23 +7,22 @@ import {
   Dimensions,
   NetInfo,
   WebView,
+  LayoutAnimation,
+  View,
+  Text,
+  StatusBar,
+  PixelRatio,
 } from 'react-native';
-import RNFS from 'react-native-fs';
-import modelManager from 'react-native-model-manager';
-import { connect } from 'react-redux';
 import Logger from 'zhike-mobile-logger';
-import PathUtils from 'zhike-path-utils';
-import ErrorMsg from 'zhike-mobile-error';
-import Api from 'zhike-mobile-api';
 import ZKButton from 'zhike-mobile-button';
 
 const { width:ScreenW, height:ScreenH } = Dimensions.get('window');
-const LAUNCH_ADS_KEY = 'LAUNCH_ADS_KEY';
-const ADS_PATH = `${RNFS.LibraryDirectoryPath}/ADs`;
+
 
 type AdInfo = {
   localPath: string,
   link: string,
+  startPageDuration?: number,
 }; 
 
 type NavState = {
@@ -38,25 +37,65 @@ type ParamType = {
   handleLink: (link:string) => bool,
 };
 
-type PropType = {
+type PropTypeReactNavigation = {
   navigation: {
     state: {
       params: ParamType,
     },
   },
-} | ParamType;
+};
 
-class AdView extends Component {
+type PropType = (PropTypeReactNavigation | ParamType) & {
+  leftIcon:any,
+};
+
+const Header = (props:{ title:string, titleStyle?:any, headerStyle?:any, leftIcon:any, onLeft: () => void }) => {
+  const { title, headerStyle, titleStyle, leftIcon, onLeft } = props || {};
+  return (
+    <View
+      style={[
+        {
+          height:64,
+          flexDirection:'row',
+          paddingTop:20,
+          alignItems:'center',
+          paddingLeft:8,
+          paddingRight:8,
+          justifyContent:'space-between',
+          backgroundColor: '#ffffff',
+          borderBottomColor: '#f7f8fa',
+          borderBottomWidth: 1.0 / PixelRatio.get(),
+        },
+        headerStyle
+      ]}
+    >
+      <TouchableWithoutFeedback
+        onPress={onLeft}  
+      >
+        <Image style={{ width:22, height:22 }} source={leftIcon} />
+      </TouchableWithoutFeedback>
+
+      <View style={{ alignSelf:'stretch', flex:1, flexDirection:'row', alignItems:'center' }} >
+        <Text style={[{ fontSize: 17, color: 'black', flex: 1, textAlign:'center' }, titleStyle]} >{title}</Text>
+      </View>
+
+      <View style={{ width:22, height:22 }} />
+    </View>
+  )
+};
+
+export default class AdView extends Component {
   state: {
     remainingSeconds: number,
     renderWebView: bool,
+    navState: Object,
   }
   _handleTap: () => void
   _intervalTimer: any
 
   constructor(props:PropType) {
     super(props);
-    this.state = { remainingSeconds:this._duration(props), renderWebView:false };
+    this.state = { remainingSeconds:this._duration(props), renderWebView:false, navState:{} };
     this._handleTap = this._handleTap.bind(this);
   }
 
@@ -138,6 +177,7 @@ class AdView extends Component {
     if (onWebViewStateChange) {
       onWebViewStateChange(state, this.props.navigation);
     }
+    this.setState({ navState:state });
   }
 
   _duration(props) {
@@ -170,6 +210,7 @@ class AdView extends Component {
     if (!customLinkHandled) {
       if (this._adInfo().link) {
         this._clearTime();
+        LayoutAnimation.easeInEaseOut();
         this.setState({ renderWebView:true });
       } else {
         this._quit({ action:'quit-nolink', adInfo:this._adInfo() });
@@ -182,16 +223,27 @@ class AdView extends Component {
       console.log('no local picture file, return null', this.props);
       return null;
     }
+    const adInfo = this._adInfo();
     if (this.state.renderWebView) {
       return (
-        <WebView
-          source={{ uri: `${this._adInfo().link}` }}
-          scalesPageToFit={true}
-          onNavigationStateChange={state => this._handleWebViewStateChange(state)}
-        />
-      );
+        // fixme: 不加这一层会导致WebView宽度为0
+        <View style={{flex:1, alignSelf:'stretch' }} >
+          <StatusBar barStyle={'dark-content'} />
+          <Header
+            title={this.state.navState.title}
+            leftIcon={this.props.leftIcon}
+            onLeft={() => this._quit('close', this._adInfo())}
+          />
+          <WebView
+            style={{ flex: 1, alignSelf: 'stretch' }}
+            source={{ uri: `${adInfo.link}` }}
+            scalesPageToFit={true}
+            onNavigationStateChange={state => this._handleWebViewStateChange(state)}
+          />
+        </View>
+      )
     }
-    const uri = `file://${ADS_PATH}/${this._adInfo().localPath}`;
+    const uri = `file://${this._adInfo().localPath}`;
     const buttonTitleStyle = { fontSize:16, color:'#00b5e9', textAlign:'right' };
 
     return (
@@ -219,115 +271,4 @@ class AdView extends Component {
       </TouchableWithoutFeedback>
     );
   }
-}
-
-export default AdView;
-
-
-export const refreshAds = function (options:{position:number, target:number} = { position:17, target: 3 }) {
-  options && !options.target && (options.target = 3);
-  return Api.fetchAdvertisements(['picture', 'link'], options.target, options.position)
-  .then(data => Promise.all([module.exports.getAd(), (Array.isArray(data) ? data[0] : data)]))
-  .then(([existing, data]) => {
-    if (data) {
-      Logger.info('did fetch ad: ', data);
-      return modelManager.getAsyncStore()
-        .then(store => store.setItem(LAUNCH_ADS_KEY, JSON.stringify(data)))
-        .then(() => data);
-    } else {
-      return Promise.reject(null);
-    }
-  })
-  .then((syncData) => {
-    if (!syncData) {
-      console.error('should not happend, because null data should goto catch block directly');
-      return Promise.reject('no existing, must because just fetched none ad, so did remove existing');
-    }
-    if (!syncData.localPath && !syncData.downloading) {
-      syncData.downloading = true;
-      return modelManager.getAsyncStore()
-      .then(store => store.setItem(LAUNCH_ADS_KEY, JSON.stringify(syncData)))
-      .then(() => {
-        Logger.info('will download ad.picture: ', syncData);
-        return _downloadAd(syncData);
-      });
-    } else {
-      Logger.info('no need to download ad, either because its already downloading, or its already downloaded: ', syncData);
-    }
-    return syncData;
-  })
-  .catch((err) => {
-    Logger.info('not fetch ad or sth bad happended, remov existing ad .., err: ', err);
-    return modelManager.getAsyncStore()
-    .then(store => store.removeItem(LAUNCH_ADS_KEY))
-    .catch((err) => {
-      console.error('failed to remove old ads, error: ', err);
-    })
-    .then(() => null);
-  });
-};
-
-export const getAd =  function () {
-  return NetInfo.fetch()
-  .then((state) => {
-    if (state === 'none') {
-      return Promise.reject(ErrorMsg.ERR_NETWORK_UNAVAILABLE);
-    } else {
-      return modelManager.getAsyncStore();
-    }
-  })
-  .then(store => store.getItem(LAUNCH_ADS_KEY))
-  .then((adStr) => {
-    const ret = JSON.parse(adStr);
-    console.log('adInfo: ', ret);
-    return ret;
-  })
-  .catch((err) => {
-    Logger.error('failed to getAd, error: ', err);
-    return null;
-  });
-};
-
-function _saveAd(ad) {
-  return modelManager.getAsyncStore()
-  .then(store => store.setItem(LAUNCH_ADS_KEY, JSON.stringify(ad)))
-  .catch((err) => {
-    Logger.error('failed to _saveAd, error: ', ad, err);
-  });
-}
-
-function _downloadAd(ad) {
-  const localPath = PathUtils.urlToPath(ad.picture);
-  const localPathFull = `${ADS_PATH}/${PathUtils.urlToPath(ad.picture)}`;
-  return PathUtils.mkdirForFilePathIfNeeded(localPathFull)
-  .then(() => Promise.all([RNFS.downloadFile({
-    fromUrl: ad.picture,
-    toFile: localPathFull
-  }), localPath]))
-  .then(([completeInfo, localPath]) => {
-    ad.localPath = localPath;
-    ad.downloading = false;
-    Logger.info('finish download ad, will check consistency: ', ad);
-    return Promise.all([module.exports.getAd(), ad]);
-  })
-  .then(([existing, ad]) => {
-    if (!existing || existing.picture  === ad.picture) {
-      Logger.info('consistent, will save localPath and downloading srtatus');
-      return _saveAd(ad);
-    } else {
-      Logger.error(
-        'too bad, downloaded picture not same with current adinfo, maybe try download too fast with different picture, also will not write back the outdated adinfo'
-        );
-      return RNFS.unlink(localPathFull).catch(err => console.error('failed to unlink file!', err));
-    }
-  })
-  .catch((err) => {
-    ad.localPath = null;
-    ad.downloading = false;
-    _saveAd(ad);
-    console.error('failed to mkdir for ADS_PATH, err: ', ADS_PATH, err);
-    console.error('or ... failed to download picure for ad, error: ', ad, err);
-    Logger.error('failed to mkdir for ADS_PATH, err: ', ADS_PATH, err);
-    Logger.error('or ... failed to download picure for ad, error: ', ad, err);
-  });
 }
