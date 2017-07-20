@@ -1,10 +1,12 @@
+// @flow
 
-import React, { Component, PropTypes } from 'react';
+import React, { Component } from 'react';
 import {
   TouchableWithoutFeedback,
   Image,
   Dimensions,
   NetInfo,
+  WebView,
 } from 'react-native';
 import RNFS from 'react-native-fs';
 import modelManager from 'react-native-model-manager';
@@ -13,17 +15,46 @@ import Logger from 'zhike-mobile-logger';
 import PathUtils from 'zhike-path-utils';
 import ErrorMsg from 'zhike-mobile-error';
 import Api from 'zhike-mobile-api';
-import handleLink from 'zhike-mobile-link-handler';
 import ZKButton from 'zhike-mobile-button';
 
 const { width:ScreenW, height:ScreenH } = Dimensions.get('window');
 const LAUNCH_ADS_KEY = 'LAUNCH_ADS_KEY';
 const ADS_PATH = `${RNFS.LibraryDirectoryPath}/ADs`;
 
-class AdView extends Component {
-  _handleTap: () => void
+type AdInfo = {
+  localPath: string,
+  link: string,
+}; 
 
-  constructor(props) {
+type NavState = {
+  title: string,
+};
+
+type ParamType = {
+  adInfo: AdInfo,
+  dismissAction: (action: string, adInfo: AdInfo) => void,
+  onHit: (adInfo: AdInfo) => void,
+  onWebViewStateChange: (navState: NavState, navigation: any) => void,
+  handleLink: (link:string) => bool,
+};
+
+type PropType = {
+  navigation: {
+    state: {
+      params: ParamType,
+    },
+  },
+} | ParamType;
+
+class AdView extends Component {
+  state: {
+    remainingSeconds: number,
+    renderWebView: bool,
+  }
+  _handleTap: () => void
+  _intervalTimer: any
+
+  constructor(props:PropType) {
     super(props);
     this.state = { remainingSeconds:this._duration(props), renderWebView:false };
     this._handleTap = this._handleTap.bind(this);
@@ -32,7 +63,6 @@ class AdView extends Component {
   componentDidMount() {
     this._intervalTimer = setInterval(() => {
       if (this._intervalTimer) {
-        console.log('AdView props: ', this.props);
         const cur = this.state.remainingSeconds;
         this.setState({ remainingSeconds:cur - 1 }, () => {
           if (this.state.remainingSeconds === 0) {
@@ -79,6 +109,18 @@ class AdView extends Component {
     );
   }
 
+  _handleLink() {
+    return (
+      this.props.handleLink ||
+      (
+        this.props.navigation &&
+        this.props.navigation.state &&
+        this.props.navigation.state.params &&
+        this.props.navigation.state.params.handleLink
+      ) ||
+      (() => false)
+    );
+  }
   _onWebViewStateChange() {
     return (
       this.props.onWebViewStateChange ||
@@ -123,7 +165,7 @@ class AdView extends Component {
     Logger.info('ad is being hit: ', this._adInfo());
     const onHit = this._onHit();
     onHit && onHit({ adInfo:this._adInfo() });
-    const customLinkHandled = handleLink(this._adInfo().link);
+    const customLinkHandled = this._handleLink()(this._adInfo().link);
     // assume if customLinkHandled, top route will be replaced
     if (!customLinkHandled) {
       if (this._adInfo().link) {
@@ -143,14 +185,13 @@ class AdView extends Component {
     if (this.state.renderWebView) {
       return (
         <WebView
-          source={{ uri: `${this._adInfo().url}` }}
+          source={{ uri: `${this._adInfo().link}` }}
           scalesPageToFit={true}
           onNavigationStateChange={state => this._handleWebViewStateChange(state)}
         />
-      )
+      );
     }
     const uri = `file://${ADS_PATH}/${this._adInfo().localPath}`;
-    console.log('displaying picture: ', uri);
     const buttonTitleStyle = { fontSize:16, color:'#00b5e9', textAlign:'right' };
 
     return (
@@ -180,36 +221,19 @@ class AdView extends Component {
   }
 }
 
-AdView.propTypes = {
-  adInfo: PropTypes.shape({
-    localPath: PropTypes.string.isRequired,
-  }),
-  dismissAction: PropTypes.func,
-  onHit:PropTypes.func,
-  onWebViewStateChange: PropTypes.func,
-};
-
 export default AdView;
 
-// /ad:
-// /{...data[i], localPath, downloading}
 
-module.exports.refreshAds = function (options:{position:number, target:number} = { position:17, target: 3 }) {
+export const refreshAds = function (options:{position:number, target:number} = { position:17, target: 3 }) {
   options && !options.target && (options.target = 3);
   return Api.fetchAdvertisements(['picture', 'link'], options.target, options.position)
   .then(data => Promise.all([module.exports.getAd(), (Array.isArray(data) ? data[0] : data)]))
   .then(([existing, data]) => {
     if (data) {
       Logger.info('did fetch ad: ', data);
-      if (!existing || existing.picture !== data.picture || existing.link !== data.link) {
-        Logger.info('different ad with existing will override: ', existing, data);
-        return modelManager.getAsyncStore()
+      return modelManager.getAsyncStore()
         .then(store => store.setItem(LAUNCH_ADS_KEY, JSON.stringify(data)))
         .then(() => data);
-      } else {
-        Logger.info('same ad, no need to override: ', data);
-        return existing;
-      }
     } else {
       return Promise.reject(null);
     }
@@ -243,7 +267,7 @@ module.exports.refreshAds = function (options:{position:number, target:number} =
   });
 };
 
-module.exports.getAd =  function () {
+export const getAd =  function () {
   return NetInfo.fetch()
   .then((state) => {
     if (state === 'none') {
@@ -307,11 +331,3 @@ function _downloadAd(ad) {
     Logger.error('or ... failed to download picure for ad, error: ', ad, err);
   });
 }
-
-module.exports.getAd()
-.then((ad) => {
-  if (ad) {
-    ad.downloading = false;
-    _saveAd(ad);
-  }
-});
