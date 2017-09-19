@@ -23,7 +23,7 @@ type AdInfo = {
   localPath: string,
   link: string,
   startPageDuration?: number,
-}; 
+};
 
 type NavState = {
   title: string,
@@ -70,7 +70,7 @@ const Header = (props:{ title:string, titleStyle?:any, headerStyle?:any, leftIco
       ]}
     >
       <TouchableWithoutFeedback
-        onPress={onLeft}  
+        onPress={onLeft}
       >
         <Image style={{ width:22, height:22 }} source={leftIcon} />
       </TouchableWithoutFeedback>
@@ -110,6 +110,10 @@ export default class AdView extends Component {
         });
       }
     }, 1000);
+  }
+
+  componentWillUnmount() {
+    this._clearTime();
   }
 
   _adInfo() {
