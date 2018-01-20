@@ -212,13 +212,13 @@ export default class AdView extends Component {
     const customLinkHandled = this._handleLink()(this._adInfo().link);
     // assume if customLinkHandled, top route will be replaced
     if (!customLinkHandled) {
-      if (this._adInfo().link) {
-        this._clearTime();
-        LayoutAnimation.easeInEaseOut();
-        this.setState({ renderWebView:true });
-      } else {
-        this._quit({ action:'quit-nolink', adInfo:this._adInfo() });
-      }
+
+			this._clearTime();
+			LayoutAnimation.easeInEaseOut();
+			// this.setState({ renderWebView:true });
+			this.props.adInfo.onTap();
+
+      this._quit({ action:'quit-nolink', adInfo:this._adInfo() });
     }
   }
 
@@ -247,7 +247,7 @@ export default class AdView extends Component {
         </View>
       )
     }
-    const uri = `file://${this._adInfo().localPath}`;
+    const uri = this.props.adInfo.localPath;
     const buttonTitleStyle = { fontSize:16, color:'#00b5e9', textAlign:'right' };
 
     return (
