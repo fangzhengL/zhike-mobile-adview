@@ -248,7 +248,8 @@ export default class AdView extends Component {
       )
     }
     const uri = this.props.adInfo.localPath;
-    const buttonTitleStyle = { fontSize:16, color:'#00b5e9', textAlign:'right' };
+    const buttonTitleStyle = { fontSize: 12,
+			color: "#ffffff" };
 
     return (
       <TouchableWithoutFeedback
@@ -259,16 +260,16 @@ export default class AdView extends Component {
           source={{ uri }}
         >
           <ZKButton
-            style={{ position:'absolute', top:30, right:20, backgroundColor:'transparent' }}
+            style={{ position:'absolute', top:30, right:20, borderRadius: 12.7,
+							backgroundColor: "rgba(0, 0, 0, 0.35)",
+							borderStyle: "solid",
+							borderWidth: 1,
+							borderColor: "#ffffff",
+              width:64.3,
+							height: 25.4,
+						}}
             titleStyle={buttonTitleStyle}
-            text={`${this.state.remainingSeconds}s`}
-            onPress={() => this._quit('skip')}
-          />
-
-          <ZKButton
-            style={{ position:'absolute', bottom:30, right:20, backgroundColor:'transparent' }}
-            titleStyle={buttonTitleStyle}
-            text={'跳过'}
+            text={`${this.state.remainingSeconds}s 跳过`}
             onPress={() => this._quit('skip')}
           />
         </Image>
