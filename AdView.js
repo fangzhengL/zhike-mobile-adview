@@ -12,6 +12,7 @@ import {
   Text,
   StatusBar,
   PixelRatio,
+  SafeAreaView
 } from 'react-native';
 import Logger from 'zhike-mobile-logger';
 import ZKButton from 'zhike-mobile-button';
@@ -252,6 +253,7 @@ export default class AdView extends Component {
 			color: "#ffffff" };
 
     return (
+     <SafeAreaView>
       <TouchableWithoutFeedback
         onPress={this._handleTap}
       >
@@ -274,6 +276,7 @@ export default class AdView extends Component {
           />
         </Image>
       </TouchableWithoutFeedback>
+     </SafeAreaView>
     );
   }
 }
